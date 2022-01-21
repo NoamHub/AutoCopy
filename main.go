@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-var source_dir = "C:\\Projects\\Go\\AutoCopy\\Source"
+var source_dir = "D:\\"
 var dest_dir = "C:\\Projects\\Go\\AutoCopy\\Dest"
 var timestamp_path = "C:\\Projects\\Go\\AutoCopy\\TS"
 
@@ -19,6 +19,8 @@ var files_in_dest_dir = map[string]bool{}
 
 func main() {
 
+	ScanDestFolder(dest_dir, files_in_dest_dir)
+
 	file, err := os.Stat(timestamp_path)
 	if errors.Is(err, os.ErrNotExist) {
 		fmt.Println("Timestamp file is missing. Aborting")
@@ -26,9 +28,19 @@ func main() {
 	}
 
 	timestamp := file.ModTime()
-	//fmt.Println(ts.Before(time.Now()))
+	fmt.Println("Timestamp =", timestamp)
 
 	ScanFolder(source_dir, timestamp)
+
+	// Update timestamp
+	currenttime := time.Now()
+	err = os.Chtimes(timestamp_path, currenttime, currenttime)
+
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Exit successfully!")
 }
 
 func ScanFolder(directory string, timestamp time.Time) {
@@ -41,6 +53,12 @@ func ScanFolder(directory string, timestamp time.Time) {
 			ScanFolder(filepath.Join(directory, item.Name()), timestamp)
 		} else {
 			fmt.Println(item.Name(), item.ModTime())
+
+			if item.ModTime().Before(timestamp) {
+				fmt.Println("Modified before timestamp")
+				continue
+			}
+
 			if files_in_dest_dir[item.Name()] {
 				panic("File already found in destination directory")
 			}
@@ -62,7 +80,6 @@ func ScanFolder(directory string, timestamp time.Time) {
 			if err != nil {
 				panic(err)
 			}
-	
 
 			files_in_dest_dir[item.Name()] = true
 		}
